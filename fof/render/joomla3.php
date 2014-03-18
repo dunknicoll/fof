@@ -108,4 +108,147 @@ class FOFRenderJoomla3 extends FOFRenderStrapper
 				break;
 		}
 	}
+
+    /**
+     * Renders a raw FOFForm and returns the corresponding HTML
+     *
+     * @param   FOFForm   &$form     The form to render
+     * @param   FOFModel  $model     The model providing our data
+     * @param   FOFInput  $input     The input object
+     * @param   string    $formType  The form type e.g. 'edit' or 'read'
+     *
+     * @return  string    The HTML rendering of the form
+     */
+    protected function renderFormRaw(FOFForm &$form, FOFModel $model, FOFInput $input, $formType)
+    {
+        $html = '';
+        $fieldsets = $form->getFieldsets();
+        $tabs = $form->getAttribute('tabs',false);
+        $viewName = $form->getView()->get('name');
+
+        if (!empty($fieldsets) && $tabs)
+        {
+            $first_fieldset = reset($fieldsets);
+            $first_fieldset = $first_fieldset->name . "_tab";
+            $active_fieldset = $form->getAttribute('active-tab', $first_fieldset);
+            $html .= JHtml::_('bootstrap.startTabSet', $viewName, array('active' => $active_fieldset));
+        }
+
+        foreach ($fieldsets as $fieldset)
+        {
+            $fields = $form->getFieldset($fieldset->name);
+
+            if ($tabs)
+            {
+                $html .= JHtml::_('bootstrap.addTab', $viewName, $fieldset->name."_tab", $fieldset->label);
+            }
+
+            if (isset($fieldset->class))
+            {
+                $class = 'class="' . $fieldset->class . '"';
+            }
+            else
+            {
+                $class = '';
+            }
+
+            $html .= "\t" . '<div id="' . $fieldset->name . '" ' . $class . '>' . PHP_EOL;
+
+            if (isset($fieldset->label) && !empty($fieldset->label) && !$tabs)
+            {
+                $html .= "\t\t" . '<h3>' . JText::_($fieldset->label) . '</h3>' . PHP_EOL;
+            }
+
+            foreach ($fields as $field)
+            {
+                $required    = $field->required;
+                $labelClass  = $field->labelClass;
+                $groupClass  = $form->getFieldAttribute($field->fieldname, 'groupclass', '', $field->group);
+
+                // Auto-generate label and description if needed
+                // Field label
+                $title       = $form->getFieldAttribute($field->fieldname, 'label', '', $field->group);
+                $emptylabel  = $form->getFieldAttribute($field->fieldname, 'emptylabel', false, $field->group);
+
+                if (empty($title) && !$emptylabel)
+                {
+                    $model->getName();
+                    $title = strtoupper($input->get('option') . '_' . $model->getName() . '_' . $field->id . '_LABEL');
+                }
+
+                // Field description
+                $description = $form->getFieldAttribute($field->fieldname, 'description', '', $field->group);
+
+                /**
+                 * The following code is backwards incompatible. Most forms don't require a description in their form
+                 * fields. Having to use emptydescription="1" on each one of them is an overkill. Removed.
+                 */
+                /*
+                $emptydescription   = $form->getFieldAttribute($field->fieldname, 'emptydescription', false, $field->group);
+                if (empty($description) && !$emptydescription)
+                {
+                    $description = strtoupper($input->get('option') . '_' . $model->getName() . '_' . $field->id . '_DESC');
+                }
+                */
+
+                if ($formType == 'read')
+                {
+                    $inputField = $field->static;
+                }
+                elseif ($formType == 'edit')
+                {
+                    $inputField = $field->input;
+                }
+
+                if (empty($title))
+                {
+                    $html .= "\t\t\t" . $inputField . PHP_EOL;
+
+                    if (!empty($description) && $formType == 'edit')
+                    {
+                        $html .= "\t\t\t\t" . '<span class="help-block">';
+                        $html .= JText::_($description) . '</span>' . PHP_EOL;
+                    }
+                }
+                else
+                {
+                    $html .= "\t\t\t" . '<div class="control-group ' . $groupClass . '">' . PHP_EOL;
+                    $html .= "\t\t\t\t" . '<label class="control-label ' . $labelClass . '" for="' . $field->id . '">' . PHP_EOL;
+                    $html .= "\t\t\t\t" . JText::_($title) . PHP_EOL;
+
+                    if ($required)
+                    {
+                        $html .= ' *';
+                    }
+
+                    $html .= "\t\t\t\t" . '</label>' . PHP_EOL;
+                    $html .= "\t\t\t\t" . '<div class="controls">' . PHP_EOL;
+                    $html .= "\t\t\t\t" . $inputField . PHP_EOL;
+
+                    if (!empty($description))
+                    {
+                        $html .= "\t\t\t\t" . '<span class="help-block">';
+                        $html .= JText::_($description) . '</span>' . PHP_EOL;
+                    }
+
+                    $html .= "\t\t\t\t" . '</div>' . PHP_EOL;
+                    $html .= "\t\t\t" . '</div>' . PHP_EOL;
+                }
+            }
+
+            $html .= "\t" . '</div>' . PHP_EOL;
+
+            if ($tabs)
+            {
+                $html .= JHtml::_('bootstrap.endTab');
+            }
+        }
+
+        if (!empty($fieldsets) && $tabs)
+        {
+            $html .= JHtml::_('bootstrap.endTabSet');
+        }
+
+        return $html;
+    }
 }

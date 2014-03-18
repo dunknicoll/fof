@@ -1024,7 +1024,42 @@ HTML;
 	{
 		$html = '';
 
-		foreach ($form->getFieldsets() as $fieldset)
+        $fieldsets = $form->getFieldsets();
+        $tabs = $form->getAttribute('tabs',false);
+        $viewName = $form->getView()->get('name');
+        $setActive = ' class="active"';
+
+        $document = JFactory::getDocument();
+
+        $script = "(function($){" . PHP_EOL;
+            $script .= "$(document).ready(function() {" . PHP_EOL;
+                $script .= "$('#" . $viewName . "Tabs a').click(function (e)" . PHP_EOL;
+                $script .= "{" . PHP_EOL;
+                    $script .= "e.preventDefault();" . PHP_EOL;
+                    $script .= "$(this).tab('show');" . PHP_EOL;
+                $script .= "});" . PHP_EOL;
+            $script .= "});" . PHP_EOL;
+        $script .= "})(jQuery);" . PHP_EOL;
+
+        $document->addScriptDeclaration($script);
+
+        if( !empty($fieldsets) && $tabs )
+        {
+            $html .= '<ul class="nav nav-tabs" id="' . $viewName . 'Tabs">' . PHP_EOL;
+
+            // 2 loops, one for tabs, the other for content
+            foreach ($fieldsets as $fieldset)
+            {
+                $html .= '<li' . $setActive . '><a href="#'.$fieldset->name.'_tab" data-toggle="tab">'. $fieldset->label .'</a></li>' . PHP_EOL;
+                $setActive = '';
+            }
+
+            $html .= '</ul>' . PHP_EOL;
+
+            $html .= '<div class="tab-content" id="' . $viewName . 'Content">' . PHP_EOL;
+        }
+
+		foreach ($fieldsets as $fieldset)
 		{
 			$fields = $form->getFieldset($fieldset->name);
 
@@ -1036,6 +1071,11 @@ HTML;
 			{
 				$class = '';
 			}
+
+            if ($tabs)
+            {
+                $html .= '<div id="' . $fieldset->name . '_tab" class="tab-pane">' . PHP_EOL;
+            }
 
 			$html .= "\t" . '<div id="' . $fieldset->name . '" ' . $class . '>' . PHP_EOL;
 
@@ -1122,7 +1162,17 @@ HTML;
 			}
 
 			$html .= "\t" . '</div>' . PHP_EOL;
+
+            if ($tabs)
+            {
+                $html .= '</div>' . PHP_EOL;
+            }
 		}
+
+        if( !empty($fieldsets) && $tabs )
+        {
+            $html .= '</div>' . PHP_EOL;
+        }
 
 		return $html;
 	}
